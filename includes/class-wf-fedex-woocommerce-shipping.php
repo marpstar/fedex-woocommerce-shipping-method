@@ -4,13 +4,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
+	//private $default_boxes;
 	private $found_rates;
 	private $services;
 
 	public function __construct() {
 		$this->id                               = WF_Fedex_ID;
-		$this->method_title                     = __( 'FedEx Basic', 'wf-shipping-fedex' );
-		$this->method_description               = __( 'Obtains  real time shipping rates via FedEx Shipping API. Upgrade to Premium version for Print label & Tracking features.', 'wf-shipping-fedex' );
+		$this->method_title                     = __( 'FedEx (BASIC)', 'wf-shipping-fedex' );
+		$this->method_description               = __( 'Obtains  real time shipping rates and Print shipping labels via FedEx Shipping API.', 'wf-shipping-fedex' );
 		$this->rateservice_version              = 16;
 		$this->addressvalidationservice_version = 2;
 		$this->services                         = include( 'data-wf-service-codes.php' );
@@ -37,24 +38,24 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->debug           = ( $bool = $this->get_option( 'debug' ) ) && $bool == 'yes' ? true : false;
 		$this->insure_contents = ( $bool = $this->get_option( 'insure_contents' ) ) && $bool == 'yes' ? true : false;
 		$this->request_type    = $this->get_option( 'request_type', 'LIST' );
-		$this->packing_method  = $this->get_option( 'packing_method', 'per_item' );
-		$this->boxes           = $this->get_option( 'boxes', array( ));
+		$this->packing_method  = 'per_item' ;
 		$this->custom_services = $this->get_option( 'services', array( ));
 		$this->offer_rates     = $this->get_option( 'offer_rates', 'all' );
 		$this->convert_currency_to_base     = $this->get_option( 'convert_currency');		
 		$this->residential     = ( $bool = $this->get_option( 'residential' ) ) && $bool == 'yes' ? true : false;
-		$this->freight_enabled = false;
 		$this->fedex_one_rate  = ( $bool = $this->get_option( 'fedex_one_rate' ) ) && $bool == 'yes' ? true : false;
-		$this->fedex_one_rate_package_ids = array(
-			'FEDEX_SMALL_BOX',
-			'FEDEX_MEDIUM_BOX',
-			'FEDEX_LARGE_BOX',
-			'FEDEX_EXTRA_LARGE_BOX',
-			'FEDEX_PAK',
-			'FEDEX_ENVELOPE',
-		);
-
-		// Insure contents requires matching currency to country
+		
+		if($this->get_option( 'dimension_weight_unit' ) == 'LBS_IN'){
+			$this->dimension_unit	=	'in';
+			$this->weight_unit		=	'lbs';
+			$this->labelapi_dimension_unit	=	'IN';
+			$this->labelapi_weight_unit 	=	'LB';
+		}else{
+			$this->dimension_unit	=	'cm';
+			$this->weight_unit		=	'kg';
+			$this->labelapi_dimension_unit	=	'CM';
+			$this->labelapi_weight_unit 	=	'KG';
+		}
 		switch ( WC()->countries->get_base_country() ) {
 			case 'US' :
 				if ( 'USD' !== get_woocommerce_currency() ) {
@@ -80,15 +81,18 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	private function wf_get_fedex_currency(){
 		if(get_woocommerce_currency() == 'GBP') 
 			return 'UKL';
-		
-		return get_woocommerce_currency();		
+		else if(get_woocommerce_currency() == 'CHF') 
+			return 'SFR';
+		else if(get_woocommerce_currency() == 'MXN') 
+			return 'NMP';
+		return get_woocommerce_currency();
 	}
 
 	private function environment_check() {
 		if ( ! in_array( get_woocommerce_currency(), array( 'USD' ) )) {
 			echo '<div class="notice">
 				<p>' . __( 'FedEx API returns the rates in USD. Please enable Rates in base currency option in the plugin. Conversion happens only if FedEx API provide the exchange rates.', 'wf-shipping-fedex' ) . '</p>
-			</div>';
+			</div>'; 
 		} 
 			
 		if ( ! $this->origin && $this->enabled == 'yes' ) {
@@ -101,15 +105,18 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	public function admin_options() {
 		// Check users environment supports this method
 		$this->environment_check();
+		
 		?>
 		<div class="wf-banner updated below-h2">
-			<img class="scale-with-grid" src="http://www.wooforce.com/wp-content/uploads/2015/07/WooForce-Logo-Admin-Banner-Basic.png" alt="Wordpress / WooCommerce USPS, Canada Post Shipping | WooForce">
-  			<p class="main"><strong>FedEx Premium version streamlines your complete shipping process and saves time</strong></p>
-			<p>&nbsp;-&nbsp;Print shipping label with postage.<br>
-			&nbsp;-&nbsp;Auto Shipment Tracking: It happens automatically while generating the label.<br>
-			&nbsp;-&nbsp;Box packing.<br>
-			&nbsp;-&nbsp;Enable/disable, edit the names of, and add handling costs to shipping services.<br>
-			&nbsp;-&nbsp;Excellent Support for setting it up!</p>
+  			<p class="main">
+			<ul>
+				<li style='color:red;'><strong>Your Business is precious! Go Premium!</li></strong>
+				<li><strong>WooForce FedEx Premium version for WooCommerce streamlines your complete shipping process and saves time</strong></li>
+				<li><strong>- Timely compatibility updates and bug fixes.</strong ></li>
+				<li><strong>- Premium Support:</strong> Faster and time bound response for support requests.</li>
+				<li><strong>- More Features:</strong> Label Printing with Postage, Automatic Shipment Tracking, Box Packing, Weight based Packing and Many More..</li>
+			</ul>
+			</p>
 			<p><a href="http://www.wooforce.com/product/fedex-woocommerce-shipping-with-print-label-plugin/" target="_blank" class="button button-primary">Upgrade to Premium Version</a> <a href="http://fedex.wooforce.com/wp-admin/admin.php?page=wc-settings&tab=shipping&section=wf_fedex_woocommerce_shipping_method" target="_blank" class="button">Live Demo</a></p>
 		</div>
 		<style>
@@ -119,7 +126,8 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 			padding: 15px 0
 		}
 		</style>
-		<?php 
+		<?php
+		
 		// Show settings
 		parent::admin_options();
 	}
@@ -129,20 +137,18 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	}
 
 	public function generate_services_html() {
-		return '';
+		ob_start();
+		include( 'html-wf-services.php' );
+		return ob_get_clean();
 	}
 
 	public function validate_services_field( $key ) {
 		$services         = array();
-		$posted_services  = $this->services;
- 
-		foreach ( $posted_services as $code => $name ) {
+		$posted_services  = $_POST['fedex_service'];
+		foreach ( $posted_services as $code => $settings ) {
 			$services[ $code ] = array(
-				'name'               => $name,
-				'order'              => '',
-				'enabled'            => true,
-				'adjustment'         => '',
-				'adjustment_percent' => ''
+				'order'              => woocommerce_clean( $settings['order'] ),
+				'enabled'            => isset( $settings['enabled'] ) ? true : false,
 			);
 		}
 
@@ -151,6 +157,12 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 
 	public function get_fedex_packages( $package ) {
 		switch ( $this->packing_method ) {
+			case 'box_packing' :
+				return $this->box_shipping( $package );
+			break;
+			case 'weight_based' :
+				return $this->weight_based_shipping( $package );
+			break;
 			case 'per_item' :
 			default :
 				return $this->per_item_shipping( $package );
@@ -181,8 +193,8 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				'GroupNumber'       => $group_id,
 				'GroupPackageCount' => $values['quantity'],
 				'Weight' => array(
-					'Value' => max( '0.5', round( woocommerce_get_weight( $values['data']->get_weight(), 'lbs' ), 2 ) ),
-					'Units' => 'LB'
+					'Value' => round( woocommerce_get_weight( $values['data']->get_weight(), $this->weight_unit ), 2 ),
+					'Units' => $this->labelapi_weight_unit
 				),
 				'packed_products' => array( $values['data'] )
 			);
@@ -194,10 +206,10 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				sort( $dimensions );
 
 				$group['Dimensions'] = array(
-					'Length' => max( 1, round( woocommerce_get_dimension( $dimensions[2], 'in' ), 2 ) ),
-					'Width'  => max( 1, round( woocommerce_get_dimension( $dimensions[1], 'in' ), 2 ) ),
-					'Height' => max( 1, round( woocommerce_get_dimension( $dimensions[0], 'in' ), 2 ) ),
-					'Units'  => 'IN'
+					'Length' => max( 1, round( woocommerce_get_dimension( $dimensions[2], $this->dimension_unit ), 2 ) ),
+					'Width'  => max( 1, round( woocommerce_get_dimension( $dimensions[1], $this->dimension_unit ), 2 ) ),
+					'Height' => max( 1, round( woocommerce_get_dimension( $dimensions[0], $this->dimension_unit ), 2 ) ),
+					'Units'  => $this->labelapi_dimension_unit
 				);
 			}
 
@@ -259,8 +271,12 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 						)
 					)
 				);
+                
+                $this->debug( 'FedEx ADDRESS VALIDATION REQUEST: <a href="#" class="debug_reveal">Reveal</a><pre class="debug_info" style="background:#EEE;border:1px solid #DDD;padding:5px;">' . print_r( $request, true ) . '</pre>' );
 
 				$response = $client->addressValidation( $request );
+                
+                $this->debug( 'FedEx ADDRESS VALIDATION RESPONSE: <a href="#" class="debug_reveal">Reveal</a><pre class="debug_info" style="background:#EEE;border:1px solid #DDD;padding:5px;">' . print_r( $response, true ) . '</pre>' );
 
 				if ( $response->HighestSeverity == 'SUCCESS' ) {
 					if ( is_array( $response->AddressResults ) )
@@ -274,8 +290,9 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 						$residential = true;
 				}
 
-			} catch (Exception $e) {}
-
+			} catch (Exception $e) {
+                $this->debug( 'FedEx ADDRESS VALIDATION: <a href="#" class="debug_reveal">Reveal</a><pre class="debug_info" style="background:#EEE;border:1px solid #DDD;padding:5px;">' .'An Unexpected error occured while calling API.' . '</pre>' );
+            }
 		}
 
 		$this->residential = apply_filters( 'woocommerce_fedex_address_type', $residential, $package );
@@ -372,45 +389,53 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 					$total_packages += $parcel['GroupPackageCount'];
 					$total_weight   += $parcel['Weight']['Value'] * $total_packages;
 
-					// Work out the commodoties for CA shipments
-					if ( $parcel_request['packed_products'] ) {
-						foreach ( $parcel_request['packed_products'] as $product ) {
-							if ( isset( $commodoties[ $product->id ] ) ) {
-								$commodoties[ $product->id ]['Quantity'] ++;
-								$commodoties[ $product->id ]['CustomsValue']['Amount'] += round( $product->get_price() );
-								continue;
-							}
-							$commodoties[ $product->id ] = array(
-								'Name'                 => sanitize_title( $product->get_title() ),
-								'NumberOfPieces'       => 1,
-								'Description'          => '',
-								'CountryOfManufacture' => ( $country = get_post_meta( $product->id, 'CountryOfManufacture', true ) ) ? $country : WC()->countries->get_base_country(),
-								'Weight'               => array(
-									'Units'            => 'LB',
-									'Value'            => max( '0.5', round( woocommerce_get_weight( $product->get_weight(), 'lbs' ), 2 ) ),
-								),
-								'Quantity'             => $parcel['GroupPackageCount'],
-								'UnitPrice'            => array(
-									'Amount'           => round( $product->get_price() ),
-									'Currency'         => $this->wf_get_fedex_currency()
-								),
-								'CustomsValue'         => array(
-									'Amount'           => $parcel['InsuredValue']['Amount'] * $parcel['GroupPackageCount'],
-									'Currency'         => $this->wf_get_fedex_currency()
-								)
-							);
+					if ( 'freight' === $request_type ) {
+						// Get the highest freight class for shipment
+						if ( isset( $parcel['freight_class'] ) && $parcel['freight_class'] > $freight_class ) {
+							$freight_class = $parcel['freight_class'];
 						}
-					}
+					} else {
+						// Work out the commodoties for CA shipments
+						if ( $parcel_request['packed_products'] ) {
+							foreach ( $parcel_request['packed_products'] as $product ) {
+								if ( isset( $commodoties[ $product->id ] ) ) {
+									$commodoties[ $product->id ]['Quantity'] ++;
+									$commodoties[ $product->id ]['CustomsValue']['Amount'] += round( $product->get_price() );
+									continue;
+								}
+								$commodoties[ $product->id ] = array(
+									'Name'                 => sanitize_title( $product->get_title() ),
+									'NumberOfPieces'       => 1,
+									'Description'          => '',
+									'CountryOfManufacture' => ( $country = get_post_meta( $product->id, 'CountryOfManufacture', true ) ) ? $country : WC()->countries->get_base_country(),
+									'Weight'               => array(
+										'Units'            => $this->labelapi_weight_unit,
+										'Value'            => round( woocommerce_get_weight( $product->get_weight(), $this->weight_unit ), 2 ),
+									),
+									'Quantity'             => $parcel['GroupPackageCount'],
+									'UnitPrice'            => array(
+										'Amount'           => round( $product->get_price() ),
+										'Currency'         => $this->wf_get_fedex_currency()
+									),
+									'CustomsValue'         => array(
+										'Amount'           => $parcel['InsuredValue']['Amount'] * $parcel['GroupPackageCount'],
+										'Currency'         => $this->wf_get_fedex_currency()
+									)
+								);
+							}
+						}
 
-					// Is this valid for a ONE rate? Smart post does not support it
-					if ( $this->fedex_one_rate && '' === $request_type && isset($parcel_request['package_id']) && in_array( $parcel_request['package_id'], $this->fedex_one_rate_package_ids )) {
-						$request['RequestedShipment']['PackagingType']                                   = $parcel_request['package_id'];
-						if('US' === $package['destination']['country'] && 'US' === $this->origin_country){
-							$request['RequestedShipment']['SpecialServicesRequested']['SpecialServiceTypes'] = 'FEDEX_ONE_RATE';
+						// Is this valid for a ONE rate? Smart post does not support it
+						if ( $this->fedex_one_rate && '' === $request_type && isset($parcel_request['package_id']) && in_array( $parcel_request['package_id'], $this->fedex_one_rate_package_ids )) {
+							$request['RequestedShipment']['PackagingType']                                   = $parcel_request['package_id'];
+							if('US' === $package['destination']['country'] && 'US' === $this->origin_country){
+								$request['RequestedShipment']['SpecialServicesRequested']['SpecialServiceTypes'] = 'FEDEX_ONE_RATE';
+							}
 						}
 					}
 
 					// Remove temp elements
+					unset( $parcel_request['freight_class'] );
 					unset( $parcel_request['packed_products'] );
 					unset( $parcel_request['package_id'] );
 
@@ -454,23 +479,74 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 					);
 				}
 
-				$core_countries = array('US','CA');
-				if (WC()->countries->get_base_country() !== $package['destination']['country'] || !in_array(WC()->countries->get_base_country(),$core_countries)) {
-					$request['RequestedShipment']['CustomsClearanceDetail']['DutiesPayment'] = array(
+				if ( 'freight' === $request_type ) {
+					$request['RequestedShipment']['Shipper'] = array(
+						'Address'               => array(
+							'StreetLines'         => array( strtoupper( $this->freight_shipper_street ), strtoupper( $this->freight_shipper_street_2 ) ),
+							'City'                => strtoupper( $this->freight_shipper_city ),
+							'StateOrProvinceCode' => strtoupper( $this->freight_shipper_state ),
+							'PostalCode'          => strtoupper( $this->origin ),
+							'CountryCode'         => strtoupper( $this->origin_country ),
+							'Residential'         => $this->freight_shipper_residential
+						)
+					);
+					$request['CarrierCodes'] = 'FXFR';
+					$request['RequestedShipment']['FreightShipmentDetail'] = array(
+						'FedExFreightAccountNumber'            => strtoupper( $this->freight_number ),
+						'FedExFreightBillingContactAndAddress' => array(
+							'Address'                             => array(
+								'StreetLines'                        => array( strtoupper( $this->freight_billing_street ), strtoupper( $this->freight_billing_street_2 ) ),
+								'City'                               => strtoupper( $this->freight_billing_city ),
+								'StateOrProvinceCode'                => strtoupper( $this->freight_billing_state ),
+								'PostalCode'                         => strtoupper( $this->freight_billing_postcode ),
+								'CountryCode'                        => strtoupper( $this->freight_billing_country )
+							)
+						),
+						'Role'                                 => 'SHIPPER',
+						'PaymentType'                          => 'PREPAID',
+					);
+
+					// Format freight class
+					$freight_class = $freight_class ? $freight_class : $this->freight_class;
+					$freight_class = $freight_class < 100 ?  '0' . $freight_class : $freight_class;
+					$freight_class = 'CLASS_' . str_replace( '.', '_', $freight_class );
+
+					$request['RequestedShipment']['FreightShipmentDetail']['LineItems'] = array(
+						'FreightClass' => $freight_class,
+						'Packaging'    => 'SKID',
+						'Weight'       => array(
+							'Units'    => $this->labelapi_weight_unit,
+							'Value'    => round( $total_weight, 2 )
+						)
+					);
+					$request['RequestedShipment']['ShippingChargesPayment'] = array(
 						'PaymentType' => 'SENDER',
 						'Payor' => array(
 							'ResponsibleParty' => array(
-								'AccountNumber'           => strtoupper( $this->account_number ),
+								'AccountNumber'           => strtoupper( $this->freight_number ),
 								'CountryCode'             => WC()->countries->get_base_country()
 							)
 						)
 					);
-					$request['RequestedShipment']['CustomsClearanceDetail']['Commodities'] = array_values( $commodoties );
-					
-					if( !in_array(WC()->countries->get_base_country(),$core_countries)){
-						$request['RequestedShipment']['CustomsClearanceDetail']['CommercialInvoice'] = array(
-							'Purpose' => 'SOLD'
+				} else {
+					$core_countries = array('US','CA');
+					if (WC()->countries->get_base_country() !== $package['destination']['country'] || !in_array(WC()->countries->get_base_country(),$core_countries)) {
+						$request['RequestedShipment']['CustomsClearanceDetail']['DutiesPayment'] = array(
+							'PaymentType' => 'SENDER',
+							'Payor' => array(
+								'ResponsibleParty' => array(
+									'AccountNumber'           => strtoupper( $this->account_number ),
+									'CountryCode'             => WC()->countries->get_base_country()
+								)
+							)
 						);
+						$request['RequestedShipment']['CustomsClearanceDetail']['Commodities'] = array_values( $commodoties );
+						
+						if( !in_array(WC()->countries->get_base_country(),$core_countries)){
+							$request['RequestedShipment']['CustomsClearanceDetail']['CommercialInvoice'] = array(
+								'Purpose' => 'SOLD'
+							);
+						}
 					}
 				}
 
@@ -482,7 +558,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		return $requests;
 	}
 
-	public function calculate_shipping( $package ) {
+	public function calculate_shipping( $package = array() ) {
 		// Clear rates
 		$this->found_rates = array();
 
