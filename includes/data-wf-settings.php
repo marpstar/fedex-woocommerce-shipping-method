@@ -77,7 +77,7 @@ return array(
 			'description'     => 'Product dimensions and weight will be converted to the selected unit and will be passed to FedEx.',
 			'options'         => array(
 				'LBS_IN'	=> __( 'Pounds & Inches', 'wf-shipping-fedex'),
-				'KG_CM' 	=> __( 'Kilograms & Centimeters', 'wf-shipping-fedex')			
+				'KG_CM' 	=> __( 'Kilograms & Centimeters', 'wf-shipping-fedex')
 			)
 	),
     'residential'      => array(
@@ -148,7 +148,7 @@ return array(
 		),
     ),
 	'services'  => array(
-		'type'            => 'services'
+		'type'            => 'services',
 	),
 	'origin'           => array(
 		'title'           => __( 'Origin Postcode', 'wf-shipping-fedex' ),

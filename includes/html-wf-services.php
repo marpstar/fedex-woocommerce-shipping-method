@@ -1,11 +1,11 @@
 <tr valign="top" id="service_options">
 	<td class="titledesc" colspan="2" style="padding-left:0px">
-	<strong><?php _e( 'Services', 'wf_fedEx_wooCommerce_shipping' ); ?></strong><br><br>
+	<strong><?php _e( 'Services', 'wf_fedex_woocommerce_shipping_method' ); ?></strong><br><br>
 		<table class="fedex_services widefat">
 			<thead >
 				<tr><th class="sort">&nbsp;</th>
 				<th></th>
-				<th><?php _e( 'Service(s)', 'wf_fedEx_wooCommerce_shipping' ); ?></th>
+				<th><?php _e( 'Service(s)', 'wf_fedex_woocommerce_shipping_method' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>

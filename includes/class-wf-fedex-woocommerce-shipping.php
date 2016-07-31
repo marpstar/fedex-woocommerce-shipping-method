@@ -4,17 +4,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
-	//private $default_boxes;
 	private $found_rates;
 	private $services;
 
-	public function __construct() {
-		$this->id                               = WF_Fedex_ID;
-		$this->method_title                     = __( 'FedEx (BASIC)', 'wf-shipping-fedex' );
-		$this->method_description               = __( 'Obtains  real time shipping rates and Print shipping labels via FedEx Shipping API.', 'wf-shipping-fedex' );
+	public function __construct($instance_id = 0) {
+
+		$this->id                               = 'wf_fedex_woocommerce_shipping_method';
+		$this->instance_id 						= absint($instance_id);
+		$this->method_title                     = __( 'FedEx', 'wf-shipping-zone-fedex' );
+		$this->method_description               = __( 'Obtains  real time shipping rates and Print shipping labels via FedEx Shipping API.', 'wf-shipping-zone-fedex' );
+		$this->admin_page_heading     = __( 'FedEx', 'wf-shipping-zone-fedex' );
+		$this->admin_page_description = __( 'Obtains  real time shipping rates and Print shipping labels via FedEx Shipping API.', 'wf-shipping-zone-fedex' );
+		$this->supports              = array(
+            'shipping-zones',
+			'instance-settings',
+			'instance-settings-modal'
+        );
 		$this->rateservice_version              = 16;
 		$this->addressvalidationservice_version = 2;
 		$this->services                         = include( 'data-wf-service-codes.php' );
+		$this->enabled = 'yes';
 		$this->init();
 	}
 
@@ -31,7 +40,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->meter_number    = $this->get_option( 'meter_number' );
 		$this->smartpost_hub   = $this->get_option( 'smartpost_hub' );
 		$this->indicia   	   = $this->get_option( 'indicia' );
-		
+
 		$this->api_key         = $this->get_option( 'api_key' );
 		$this->api_pass        = $this->get_option( 'api_pass' );
 		$this->production      = ( $bool = $this->get_option( 'production' ) ) && $bool == 'yes' ? true : false;
@@ -41,10 +50,10 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->packing_method  = 'per_item' ;
 		$this->custom_services = $this->get_option( 'services', array( ));
 		$this->offer_rates     = $this->get_option( 'offer_rates', 'all' );
-		$this->convert_currency_to_base     = $this->get_option( 'convert_currency');		
+		$this->convert_currency_to_base     = $this->get_option( 'convert_currency');
 		$this->residential     = ( $bool = $this->get_option( 'residential' ) ) && $bool == 'yes' ? true : false;
 		$this->fedex_one_rate  = ( $bool = $this->get_option( 'fedex_one_rate' ) ) && $bool == 'yes' ? true : false;
-		
+
 		if($this->get_option( 'dimension_weight_unit' ) == 'LBS_IN'){
 			$this->dimension_unit	=	'in';
 			$this->weight_unit		=	'lbs';
@@ -77,13 +86,13 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 			wc_add_notice( $message, $type );
 		}
 	}
-	
+
 	private function wf_get_fedex_currency(){
-		if(get_woocommerce_currency() == 'GBP') 
+		if(get_woocommerce_currency() == 'GBP')
 			return 'UKL';
-		else if(get_woocommerce_currency() == 'CHF') 
+		else if(get_woocommerce_currency() == 'CHF')
 			return 'SFR';
-		else if(get_woocommerce_currency() == 'MXN') 
+		else if(get_woocommerce_currency() == 'MXN')
 			return 'NMP';
 		return get_woocommerce_currency();
 	}
@@ -91,13 +100,13 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	private function environment_check() {
 		if ( ! in_array( get_woocommerce_currency(), array( 'USD' ) )) {
 			echo '<div class="notice">
-				<p>' . __( 'FedEx API returns the rates in USD. Please enable Rates in base currency option in the plugin. Conversion happens only if FedEx API provide the exchange rates.', 'wf-shipping-fedex' ) . '</p>
-			</div>'; 
-		} 
-			
+				<p>' . __( 'FedEx API returns the rates in USD. Please enable Rates in base currency option in the plugin. Conversion happens only if FedEx API provide the exchange rates.', 'wf-shipping-zone-fedex' ) . '</p>
+			</div>';
+		}
+
 		if ( ! $this->origin && $this->enabled == 'yes' ) {
 			echo '<div class="error">
-				<p>' . __( 'FedEx is enabled, but the origin postcode has not been set.', 'wf-shipping-fedex' ) . '</p>
+				<p>' . __( 'FedEx is enabled, but the origin postcode has not been set.', 'wf-shipping-zone-fedex' ) . '</p>
 			</div>';
 		}
 	}
@@ -105,35 +114,24 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	public function admin_options() {
 		// Check users environment supports this method
 		$this->environment_check();
-		
-		?>
-		<div class="wf-banner updated below-h2">
-  			<p class="main">
-			<ul>
-				<li style='color:red;'><strong>Your Business is precious! Go Premium!</li></strong>
-				<li><strong>WooForce FedEx Premium version for WooCommerce streamlines your complete shipping process and saves time</strong></li>
-				<li><strong>- Timely compatibility updates and bug fixes.</strong ></li>
-				<li><strong>- Premium Support:</strong> Faster and time bound response for support requests.</li>
-				<li><strong>- More Features:</strong> Label Printing with Postage, Automatic Shipment Tracking, Box Packing, Weight based Packing and Many More..</li>
-			</ul>
-			</p>
-			<p><a href="http://www.wooforce.com/product/fedex-woocommerce-shipping-with-print-label-plugin/" target="_blank" class="button button-primary">Upgrade to Premium Version</a> <a href="http://fedex.wooforce.com/wp-admin/admin.php?page=wc-settings&tab=shipping&section=wf_fedex_woocommerce_shipping_method" target="_blank" class="button">Live Demo</a></p>
-		</div>
-		<style>
-		.wf-banner img {
-			float: right;
-			margin-left: 1em;
-			padding: 15px 0
-		}
-		</style>
-		<?php
-		
+
 		// Show settings
 		parent::admin_options();
 	}
 
+	/**
+	 * Return the instance form fields
+	 *
+	 * @return array of instance form fields
+	 */
+	function get_instance_form_fields() {
+		$this->init_form_fields();
+		return( $this->instance_form_fields );
+	}
+
 	public function init_form_fields() {
-		$this->form_fields  = include( 'data-wf-settings.php' );
+		// $this->form_fields  = include( 'data-wf-settings.php' );
+		$this->instance_form_fields  = include( 'data-wf-settings.php' );
 	}
 
 	public function generate_services_html() {
@@ -178,12 +176,12 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		foreach ( $package['contents'] as $item_id => $values ) {
 
 			if ( ! $values['data']->needs_shipping() ) {
-				$this->debug( sprintf( __( 'Product # is virtual. Skipping.', 'wf-shipping-fedex' ), $item_id ), 'error' );
+				$this->debug( sprintf( __( 'Product # is virtual. Skipping.', 'wf-shipping-zone-fedex' ), $item_id ), 'error' );
 				continue;
 			}
 
 			if ( ! $values['data']->get_weight() ) {
-				$this->debug( sprintf( __( 'Product # is missing weight. Aborting.', 'wf-shipping-fedex' ), $item_id ), 'error' );
+				$this->debug( sprintf( __( 'Product # is missing weight. Aborting.', 'wf-shipping-zone-fedex' ), $item_id ), 'error' );
 				return;
 			}
 
@@ -271,11 +269,11 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 						)
 					)
 				);
-                
+
                 $this->debug( 'FedEx ADDRESS VALIDATION REQUEST: <a href="#" class="debug_reveal">Reveal</a><pre class="debug_info" style="background:#EEE;border:1px solid #DDD;padding:5px;">' . print_r( $request, true ) . '</pre>' );
 
 				$response = $client->addressValidation( $request );
-                
+
                 $this->debug( 'FedEx ADDRESS VALIDATION RESPONSE: <a href="#" class="debug_reveal">Reveal</a><pre class="debug_info" style="background:#EEE;border:1px solid #DDD;padding:5px;">' . print_r( $response, true ) . '</pre>' );
 
 				if ( $response->HighestSeverity == 'SUCCESS' ) {
@@ -298,7 +296,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->residential = apply_filters( 'woocommerce_fedex_address_type', $residential, $package );
 
 		if ( $this->residential == false ) {
-			$this->debug( __( 'Business Address', 'wf-shipping-fedex' ) );
+			$this->debug( __( 'Business Address', 'wf-shipping-zone-fedex' ) );
 		}
 	}
 
@@ -381,9 +379,9 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				$request['RequestedShipment']['RequestedPackageLineItems'] = array();
 
 				foreach ( $parcels as $key => $parcel ) {
-					
+
 					$single_package_weight = $parcel['Weight']['Value'];
-				
+
 					$parcel_request = $parcel;
 					$total_value    += $parcel['InsuredValue']['Amount'] * $parcel['GroupPackageCount'];
 					$total_packages += $parcel['GroupPackageCount'];
@@ -451,13 +449,13 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				$request['RequestedShipment']['PackageCount'] = $total_packages;
 
 				$indicia = $this->indicia;
-				
+
 				if($indicia == 'AUTOMATIC' && $single_package_weight >= 1)
 					$indicia = 'PARCEL_SELECT';
 				elseif($indicia == 'AUTOMATIC' && $single_package_weight < 1)
-					$indicia = 'PRESORTED_STANDARD';				
-				
-				
+					$indicia = 'PRESORTED_STANDARD';
+
+
 				// Smart post
 				if ( 'smartpost' === $request_type ) {
 					$request['RequestedShipment']['SmartPostDetail'] = array(
@@ -541,7 +539,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 							)
 						);
 						$request['RequestedShipment']['CustomsClearanceDetail']['Commodities'] = array_values( $commodoties );
-						
+
 						if( !in_array(WC()->countries->get_base_country(),$core_countries)){
 							$request['RequestedShipment']['CustomsClearanceDetail']['CommercialInvoice'] = array(
 								'Purpose' => 'SOLD'
@@ -563,7 +561,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->found_rates = array();
 
 		// Debugging
-		$this->debug( __( 'FEDEX debug mode is on - to hide these messages, turn debug mode off in the settings.', 'wf-shipping-fedex' ) );
+		$this->debug( __( 'FEDEX debug mode is on - to hide these messages, turn debug mode off in the settings.', 'wf-shipping-zone-fedex' ) );
 
 		// See if address is residential
 		$this->residential_address_validation( $package );
@@ -677,7 +675,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 			}
 		}
 	}
-	
+
 	private function convert_to_base_currency($details,$rate_cost){
 		$converted_rate = $rate_cost;
 		if($this->convert_currency_to_base == 'yes'){
@@ -686,10 +684,10 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				$convertion_rate = floatval( $details->ShipmentRateDetail->CurrencyExchangeRate->Rate);
 				if($from_currency == $this->wf_get_fedex_currency()){
 					$converted_rate = $converted_rate/$convertion_rate;
-				}			
+				}
 			}
 		}
-		return $converted_rate;		
+		return $converted_rate;
 	}
 
 	private function prepare_rate( $rate_code, $rate_id, $rate_name, $rate_cost ) {
